@@ -1,0 +1,5 @@
+[sys]
+port=8000
+
+[pic]
+root=/Users/tanqiang/pic_root
