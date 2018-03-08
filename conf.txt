@@ -1,5 +1,5 @@
 [sys]
-port=8000
+port=7001
 
 [pic]
 root=/Users/tanqiang/pic_root

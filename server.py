@@ -17,25 +17,12 @@ from thumbnail import thumb
 
 define("port", default=conf.port, help="run on the given port", type=int)
 
-def retcode(code, val):
-    return {'code':code, 'md5':val}
-
-class BaseHandler(tornado.web.RequestHandler):
-    def get_current_user(self):
-        return self.get_secure_cookie("mobile")
-    def get_role(self):
-        return int(self.get_secure_cookie("role"))
-
-class AddHandler(BaseHandler):
-    def get(self):
-        self.render('up.html')
-    @tornado.web.asynchronous
-    @tornado.gen.engine
+class AddHandler(tornado.web.RequestHandler):
     def post(self):
         ip = self.request.remote_ip
-        t  = str(time.time())
+        t  = int(time.time())
         ip = str(ip)
-        loc = '%s_%s'%(ip, t)
+        loc = 'pic_%s_%d'%(ip, t)
         if not os.path.exists(loc):
             os.makedirs(loc);
         file_metas  = self.request.files.get('file')
@@ -47,24 +34,23 @@ class AddHandler(BaseHandler):
         print("filename=", filename)
         filepath = loc + '/' + filename
         if filename:
-            yield tornado.gen.Task(self.__up_img, filepath, meta['body'])
+            with open(filepath, 'wb') as up:
+                up.write(meta['body'])
             r = self.__handle(filepath)
             if not r:
-                ret = retcode(-1, -1)
-                self.write(ret)
+                d = {'code':-1,'msg':'thumbnail error', 'data':{}}
+                d = json.dumps(d)
+                self.write(d)
             else:
-                ret = retcode(0, r)
-                self.write(ret)
+                d = {'code':0, 'msg':'ok', 'data':{'md5':r}}
+                d = json.dumps(d)
+                self.write(d)
         else:
-            ret = retcode(-1, -1)
-            self.write(ret)
+            d = {'code':-1,'msg':'filename error', 'data':{}}
+            d = json.dumps(d)
+            self.write(d)
         os.system('rm -rf ' + loc)
-        self.finish()
 
-    @tornado.gen.coroutine
-    def __up_img(self, name, body):
-        with open(name, 'wb') as up:
-            up.write(body)
     def __handle(self, filepath):
         md5sum = filemd5(filepath)
         first  = md5sum[:10]
@@ -73,13 +59,13 @@ class AddHandler(BaseHandler):
         name   = '%s/%s/%s/%s/' % (conf.picroot, first, second, third)
         if not os.path.exists(name):
             os.makedirs(name);
-        r = thumb(filepath, name + '/1.jpg', 600, 800)
+        r = thumb(filepath, name + '/1.jpg', 300, 400)
         if not r:
-            return None
-        r = thumb(filepath, name + '/2.jpg', 300, 400)
+            return []
+        r = thumb(filepath, name + '/2.jpg', 600, 800)
         if not r:
-            return None
-        return md5sum
+            return []
+        return [first, second, third]
 
 if __name__ == "__main__":
     tornado.options.parse_command_line()
