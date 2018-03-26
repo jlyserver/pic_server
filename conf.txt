@@ -1,5 +1,16 @@
 [sys]
-port=7001
+ip=127.0.0.1
+port=8050
+
+[size]
+th_x=300
+th_y=225
+x=800
+y=600
+
+[name]
+th_name=1.jpg
+name=2.jpg
 
 [pic]
-root=/Users/tanqiang/pic_root
+root=/root/app/pic1

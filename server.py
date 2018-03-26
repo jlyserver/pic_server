@@ -10,6 +10,8 @@ import json
 import time
 import datetime
 import re
+import random
+
 from tornado.options import define, options
 from conf import conf
 from picmd5 import filemd5
@@ -19,7 +21,7 @@ define("port", default=conf.port, help="run on the given port", type=int)
 
 class AddHandler(tornado.web.RequestHandler):
     def post(self):
-        ip = self.request.remote_ip
+        ip = self.get_argument('ip', '255.255.255.255')
         t  = int(time.time())
         ip = str(ip)
         loc = 'pic_%s_%d'%(ip, t)
@@ -38,7 +40,7 @@ class AddHandler(tornado.web.RequestHandler):
                 up.write(meta['body'])
             r = self.__handle(filepath)
             if not r:
-                d = {'code':-1,'msg':'thumbnail error', 'data':{}}
+                d = {'code':-1,'msg':'保存图片出错'}
                 d = json.dumps(d)
                 self.write(d)
             else:
@@ -46,7 +48,7 @@ class AddHandler(tornado.web.RequestHandler):
                 d = json.dumps(d)
                 self.write(d)
         else:
-            d = {'code':-1,'msg':'filename error', 'data':{}}
+            d = {'code':-1,'msg':'没有图片名'}
             d = json.dumps(d)
             self.write(d)
         os.system('rm -rf ' + loc)
@@ -59,10 +61,10 @@ class AddHandler(tornado.web.RequestHandler):
         name   = '%s/%s/%s/%s/' % (conf.picroot, first, second, third)
         if not os.path.exists(name):
             os.makedirs(name);
-        r = thumb(filepath, name + '/1.jpg', 300, 400)
+        r = thumb(filepath, name + '/%s'%conf.th_name , conf.th_y, conf.th_x)
         if not r:
             return []
-        r = thumb(filepath, name + '/2.jpg', 600, 800)
+        r = thumb(filepath, name + '/%s'%conf.name, conf.y, conf.x)
         if not r:
             return []
         return [first, second, third]
