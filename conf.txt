@@ -14,3 +14,7 @@ name=2.jpg
 
 [pic]
 root=/root/app/pic1
+
+[db]
+dbserver_ip=127.0.0.1
+dbserver_port=9000

@@ -18,6 +18,9 @@ class Picconf():
 
         self.picroot = p.get('pic', 'root')
 
+        self.dbserver_ip = p.get('db', 'dbserver_ip')
+        self.dbserver_port=p.get('db', 'dbserver_port')
+
     def dis(self):
         print(self.port)
         print(self.picroot)

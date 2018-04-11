@@ -1,5 +1,10 @@
 #-*- coding: utf-8 -*-
 
+import sys
+reload(sys)
+sys.setdefaultencoding('utf-8')
+
+import tornado.httpclient
 import tornado.httpserver
 import tornado.ioloop
 import tornado.web
@@ -33,7 +38,6 @@ class AddHandler(tornado.web.RequestHandler):
         if file_metas:
             meta = file_metas[0]
             filename = meta.get('filename', '')
-        print("filename=", filename)
         filepath = loc + '/' + filename
         if filename:
             with open(filepath, 'wb') as up:
@@ -44,7 +48,7 @@ class AddHandler(tornado.web.RequestHandler):
                 d = json.dumps(d)
                 self.write(d)
             else:
-                d = {'code':0, 'msg':'ok', 'data':{'md5':r}}
+                d = {'code':0, 'msg':'ok', 'data':r}
                 d = json.dumps(d)
                 self.write(d)
         else:
@@ -69,6 +73,53 @@ class AddHandler(tornado.web.RequestHandler):
             return []
         return [first, second, third]
 
+class WxUpHandler(tornado.web.RequestHandler):
+    @tornado.web.asynchronous
+    @tornado.gen.coroutine
+    def post(self):
+        uid = self.get_argument('uid', None)
+        src = self.get_argument('src', None)
+        if not uid or not src:
+            self.finish()
+        else:
+            http_client = tornado.httpclient.AsyncHTTPClient()
+            resp = yield tornado.gen.Task(http_client.fetch, src)
+
+            loc = 'uid_%s'%uid
+            if not os.path.exists(loc):
+                os.makedirs(loc);
+            filepath = loc + '/2_600×800.jpg'
+            with open(filepath, 'wb') as up:
+                up.write(resp.body)
+            r = self.__handle(filepath)
+            print(r)
+            os.system('rm -rf ' + loc)
+    
+            url='http://%s:%s/img' % (conf.dbserver_ip, conf.dbserver_port)
+            headers = self.request.headers
+            body = 'f=%s&s=%s&t=%s&k=1&uid=%s' % (r[0], r[1], r[2], uid)
+            http_client = tornado.httpclient.AsyncHTTPClient()
+            resp = tornado.gen.Task(
+                http_client.fetch,
+                url, 
+                method='POST',
+                headers=headers,
+                body=body,
+                validate_cert=False)
+            self.finish()
+
+    def __handle(self, filepath):
+        md5sum = filemd5(filepath)
+        first  = md5sum[:10]
+        second = md5sum[10:20]
+        third  = md5sum[20:]
+        name   = '%s/%s/%s/%s/' % (conf.picroot, first, second, third)
+        if not os.path.exists(name):
+            os.makedirs(name);
+        cmd = 'cp %s %s' % (filepath, name)
+        os.system(cmd)
+        return [first, second, third]
+
 if __name__ == "__main__":
     tornado.options.parse_command_line()
     settings = {
@@ -79,6 +130,7 @@ if __name__ == "__main__":
         "debug":True}
     handler = [
                (r'/up', AddHandler),
+               (r'/wxup', WxUpHandler),
               ]
     application = tornado.web.Application(handler, **settings)
     http_server = tornado.httpserver.HTTPServer(application)
